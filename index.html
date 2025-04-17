@@ -20,7 +20,7 @@
         </div>
 
     <button onclick="addShipSelection()">함선 추가</button>
-    <button onclick="calculateFG()">FG 필요 대수 계산</button>
+    <button onclick="calculateBestFG()">최적 FG 조합 계산</button>
 
     <div id="cost-display"></div>
     <div id="result"></div>
@@ -342,8 +342,13 @@
         const reinforcementLimit = 5;
         let reinforcementCount = 0;
         const shipTypes = Object.keys(shipsData);
+        const multipurposeFGWarpSpeed = 5750;
+        const reconFGWarpSpeed = 6760;
+        const fgCost = 3; // FG 코스트 (다기능형, 정찰형 동일하다고 가정)
+        const targetWarpSpeed = 4240;
+        const maxFGCount = 15;
 
-        function calculateTotalCost() {
+        function calculateTotalCost(multipurposeFGCount = 0, reconFGCount = 0) {
             let totalCost = 0;
             let reinforcementShips = 0;
             const shipSelections = document.querySelectorAll(".ship-selection");
@@ -374,6 +379,9 @@
                     }
                 }
             });
+
+            totalCost += multipurposeFGCount * fgCost;
+            totalCost += reconFGCount * fgCost;
 
             const costDisplay = document.getElementById("cost-display");
             costDisplay.innerText = `현재 코스트: ${totalCost}`;
@@ -512,19 +520,16 @@
             }
         }
 
-        function calculateFG() {
-            let totalWarpSpeed = 0;
+        function calculateBestFG() {
+            let totalShipWarpSpeed = 0;
             let totalShips = 0;
-            const totalCost = calculateTotalCost(); // 최신 코스트를 가져옴
-            let reinforcementShips = 0;
-
             const shipSelections = document.querySelectorAll(".ship-selection");
+
             shipSelections.forEach(selection => {
                 const shipTypeSelect = selection.querySelector("select[id^='ship-type-']");
                 const shipNameSelect = selection.querySelector("select[id^='ship-name-']");
                 const subModelSelect = selection.querySelector("select[id^='sub-model-']");
                 const quantityInput = selection.querySelector("input[type='number']");
-                const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
 
                 if (shipTypeSelect && shipTypeSelect.value !== "" && shipNameSelect && shipNameSelect.value !== "" && subModelSelect && subModelSelect.value !== "" && quantityInput) {
                     const selectedShipTypeName = shipTypeSelect.value;
@@ -537,41 +542,67 @@
 
                     if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
                         const subModel = selectedShip.subModels[selectedSubModelIndex];
-                        totalWarpSpeed += subModel.warpSpeed * quantity;
+                        totalShipWarpSpeed += subModel.warpSpeed * quantity;
                         totalShips += quantity;
-
-                        if (reinforcementCheckbox.checked) {
-                            reinforcementShips += quantity;
-                        }
                     }
                 }
             });
 
-            const targetWarpSpeed = 4240;
-            const fgWarpSpeed = 5000;
-
-            if (totalShips > 0) {
-                const requiredFG = Math.ceil((totalShips * targetWarpSpeed - totalWarpSpeed) / (fgWarpSpeed - targetWarpSpeed));
-
-                let resultText = `현재 평균 워프 속도: ${(totalWarpSpeed / totalShips).toFixed(2)}<br>`;
-                resultText += `목표 평균 워프 속도(${targetWarpSpeed})를 맞추기 위해 FG ${requiredFG > 0 ? requiredFG : 0}대가 필요합니다.<br>`;
-                resultText += `총 코스트: ${totalCost}`;
-
-                const resultDiv = document.getElementById("result");
-                resultDiv.innerHTML = resultText;
-
-                if (totalCost > 400) {
-                    resultDiv.classList.add("warning");
-                } else {
-                    resultDiv.classList.remove("warning");
-                }
-            } else {
+            if (totalShips === 0) {
                 document.getElementById("result").innerText = "선택된 함선이 없습니다.";
+                calculateTotalCost(0, 0);
+                return;
+            }
+
+            let bestMultipurposeFGCount = 0;
+            let bestReconFGCount = 0;
+            let minWarpSpeedDiff = Infinity;
+
+            // 다기능형 FG와 정찰형 FG 조합을 탐색 (각각 0~15대)
+            for (let multipurposeFGCount = 0; multipurposeFGCount <= maxFGCount; multipurposeFGCount++) {
+                for (let reconFGCount = 0; reconFGCount <= maxFGCount; reconFGCount++) {
+                    const currentTotalWarpSpeed = totalShipWarpSpeed + multipurposeFGCount * multipurposeFGWarpSpeed + reconFGCount * reconFGWarpSpeed;
+                    const currentTotalShips = totalShips + multipurposeFGCount + reconFGCount;
+
+                    if (currentTotalShips > 0) {
+                        const currentAverageWarpSpeed = currentTotalWarpSpeed / currentTotalShips;
+                        const warpSpeedDiff = Math.abs(currentAverageWarpSpeed - targetWarpSpeed);
+
+                        if (warpSpeedDiff < minWarpSpeedDiff) {
+                            minWarpSpeedDiff = warpSpeedDiff;
+                            bestMultipurposeFGCount = multipurposeFGCount;
+                            bestReconFGCount = reconFGCount;
+                        }
+                    }
+                }
+            }
+
+            const finalTotalWarpSpeed = totalShipWarpSpeed + bestMultipurposeFGCount * multipurposeFGWarpSpeed + bestReconFGCount * reconFGWarpSpeed;
+            const finalTotalShips = totalShips + bestMultipurposeFGCount + bestReconFGCount;
+            const finalAverageWarpSpeed = finalTotalWarpSpeed / finalTotalShips;
+            const totalFGCost = (bestMultipurposeFGCount + bestReconFGCount) * fgCost; // 두 종류 FG 모두 동일 코스트 가정
+            const finalTotalCost = calculateTotalCost(bestMultipurposeFGCount, bestReconFGCount);
+
+            let resultText = `선택된 모든 함선과 다기능형 FG ${bestMultipurposeFGCount}대, 정찰형 FG ${bestReconFGCount}대 사용 시 평균 워프 속도: ${finalAverageWarpSpeed.toFixed(2)} (목표: ${targetWarpSpeed})<br>`;
+            resultText += `FG 총 코스트: ${totalFGCost}<br>`;
+            resultText += `총 코스트: ${finalTotalCost}`;
+
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = resultText;
+
+            const costDisplay = document.getElementById("cost-display");
+            costDisplay.innerText = `현재 코스트: ${finalTotalCost}`;
+            if (finalTotalCost > 400) {
+                costDisplay.classList.add("warning");
+                resultDiv.classList.add("warning");
+            } else {
+                costDisplay.classList.remove("warning");
+                resultDiv.classList.remove("warning");
             }
         }
 
         // 초기 함선 선택 영역 추가 및 초기 코스트 계산
-        addShipSelection();a
+        addShipSelection();
     </script>
 </body>
 </html>
