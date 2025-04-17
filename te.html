@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>함선 워프 속도 계산기</title>
+    <style>
+        body { font-family: sans-serif; }
+        .ship-selection { margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; }
+        .ship-info { display: flex; align-items: center; margin-bottom: 5px; }
+        .ship-info img { width: 50px; height: 50px; margin-right: 10px; }
+        .reinforcement-container { margin-left: 10px; }
+        #cost-display { margin-top: 10px; font-weight: bold; }
+        #result { margin-top: 20px; font-weight: bold; }
+        .warning { color: red; }
+    </style>
+</head>
+<body>
+    <h1>함선 워프 속도 계산기</h1>
+
+    <div id="shipSelections">
+        </div>
+
+    <button onclick="addShipSelection()">함선 추가</button>
+    <button onclick="calculateFG()">FG 필요 대수 계산</button>
+
+    <div id="cost-display"></div>
+    <div id="result"></div>
+
+    <script>
+        const shipsData = {
+            "호위함": [
+                {
+                    name: "제노스팅어",
+                    subModels: [
+                        { name: "특수형", warpSpeed: 4600, cost: 8, image: "xenostinger_special.png" },
+                        { name: "방공형", warpSpeed: 4600, cost: 6, image: "xenostinger_aa.png" }
+                    ]
+                },
+                {
+                    name: "이노스트란케비아",
+                    subModels: [
+                        { name: "방공형", warpSpeed: 4600, cost: 6, image: "inostrankevia_aa.png" },
+                        { name: "공격형", warpSpeed: 4600, cost: 6, image: "inostrankevia_attack.png" },
+                        { name: "특수형", warpSpeed: 4600, cost: 8, image: "inostrankevia_special.png" }
+                    ]
+                },
+                {
+                    name: "노마 M470",
+                    subModels: [
+                        { name: "공성형", warpSpeed: 4000, cost: 0, image: "noma_m470_siege.png" }, // 코스트 정보 없음
+                        { name: "지원형", warpSpeed: 4000, cost: 0, image: "noma_m470_support.png" }, // 코스트 정보 없음
+                        { name: "방공형", warpSpeed: 4000, cost: 6, image: "noma_m470_aa.png" }
+                    ]
+                },
+                {
+                    name: "루비",
+                    subModels: [
+                        { name: "레일건형", warpSpeed: 5175, cost: 5, image: "ruby_railgun.png" },
+                        { name: "이온캐논형", warpSpeed: 5175, cost: 8, image: "ruby_ion.png" },
+                        { name: "방어형", warpSpeed: 5175, cost: 5, image: "ruby_defense.png" }
+                    ]
+                },
+                {
+                    name: "비의 바다",
+                    subModels: [
+                        { name: "레일건형", warpSpeed: 5175, cost: 6, image: "sea_of_rain_railgun.png" },
+                        { name: "펄스캐논형", warpSpeed: 5850, cost: 8, image: "sea_of_rain_pulse.png" }
+                    ]
+                },
+                {
+                    name: "맑음의 바다",
+                    subModels: [
+                        { name: "대함형", warpSpeed: 5175, cost: 5, image: "sea_of_serenity_anti_ship.png" },
+                        { name: "미사일형", warpSpeed: 5175, cost: 5, image: "sea_of_serenity_missile.png" },
+                        { name: "방공형", warpSpeed: 5175, cost: 5, image: "sea_of_serenity_aa.png" }
+                    ]
+                },
+                {
+                    name: "구름의 바다",
+                    subModels: [
+                        { name: "돌격형", warpSpeed: 4500, cost: 4, image: "sea_of_clouds_assault.png" },
+                        { name: "방공형", warpSpeed: 4500, cost: 4, image: "sea_of_clouds_aa.png" }
+                    ]
+                },
+                {
+                    name: "고요의 바다",
+                    subModels: [
+                        { name: "종합형", warpSpeed: 5750, cost: 4, image: "sea_of_tranquility_comprehensive.png" },
+                        { name: "펄스캐논형", warpSpeed: 5750, cost: 4, image: "sea_of_tranquility_pulse.png" },
+                        { name: "방공형", warpSpeed: 5750, cost: 4, image: "sea_of_tranquility_aa.png" }
+                    ]
+                },
+                {
+                    name: "릴리아트",
+                    subModels: [
+                        { name: "대함형", warpSpeed: 4600, cost: 4, image: "liliyat_anti_ship.png" },
+                        { name: "어뢰형", warpSpeed: 4600, cost: 4, image: "liliyat_torpedo.png" },
+                        { name: "스텔스형", warpSpeed: 4600, cost: 4, image: "liliyat_stealth.png" }
+                    ]
+                },
+                {
+                    name: "카릴리온",
+                    subModels: [
+                        { name: "정찰형", warpSpeed: 6760, cost: 4, image: "carillon_recon.png" },
+                        { name: "중형캐논형", warpSpeed: 5462, cost: 5, image: "carillon_medium_cannon.png" },
+                        { name: "특수형", warpSpeed: 6760, cost: 5, image: "carillon_special.png" }
+                    ]
+                }
+            ],
+            "구축함": [
+                {
+                    name: "타우루스",
+                    subModels: [
+                        { name: "공격형", warpSpeed: 3737, cost: 11, image: "taurus_attack.png" },
+                        { name: "돌격형", warpSpeed: 3737, cost: 11, image: "taurus_assault.png" },
+                        { name: "방어형", warpSpeed: 3737, cost: 8, image: "taurus_defense.png" }
+                    ]
+                },
+                {
+                    name: "툰드라",
+                    subModels: [
+                        { name: "지원형", warpSpeed: 3500, cost: 9, image: "tundra_support.png" },
+                        { name: "수송형", warpSpeed: 3500, cost: 9, image: "tundra_transport.png" }
+                    ]
+                },
+                {
+                    name: "알다브라",
+                    subModels: [
+                        { name: "일반형", warpSpeed: 3737, cost: 8, image: "aldabra_standard.png" },
+                        { name: "장갑형", warpSpeed: 3737, cost: 8, image: "aldabra_armored.png" }
+                    ]
+                },
+                {
+                    name: "세레스",
+                    subModels: [
+                        { name: "수송형", warpSpeed: 5525, cost: 8, image: "ceres_transport.png" },
+                        { name: "지원형", warpSpeed: 5525, cost: 8, image: "ceres_support.png" },
+                        { name: "전술형", warpSpeed: 5525, cost: 8, image: "ceres_tactical.png" }
+                    ]
+                },
+                {
+                    name: "에리스",
+                    subModels: [
+                        { name: "캐논형", warpSpeed: 5175, cost: 7, image: "eris_cannon.png" },
+                        { name: "장갑형", warpSpeed: 5175, cost: 7, image: "eris_armored.png" },
+                        { name: "중형캐논형", warpSpeed: 5175, cost: 9, image: "eris_medium_cannon.png" }
+                    ]
+                },
+                {
+                    name: "콰오아",
+                    subModels: [
+                        { name: "레일건형", warpSpeed: 5525, cost: 6, image: "quaoar_railgun.png" },
+                        { name: "어뢰형", warpSpeed: 5525, cost: 6, image: "quaoar_torpedo.png" }
+                    ]
+                },
+                {
+                    name: "가디언",
+                    subModels: [
+                        { name: "지원형", warpSpeed: 4225, cost: 9, image: "guardian_support.png" },
+                        { name: "수륙양용형", warpSpeed: 4225, cost: 14, image: "guardian_amphibious.png" },
+                        { name: "펄스캐논형", warpSpeed: 4225, cost: 9, image: "guardian_pulse.png" }
+                    ]
+                },
+                {
+                    name: "윙드 후사르",
+                    subModels: [
+                        { name: "대함형", warpSpeed: 4550, cost: 6, image: "winged_hussar_anti_ship.png" },
+                        { name: "종합형", warpSpeed: 5525, cost: 6, image: "winged_hussar_comprehensive.png" },
+                        { name: "방공형", warpSpeed: 5525, cost: 6, image: "winged_hussar_aa.png" }
+                    ]
+                },
+                {
+                    name: "AC721",
+                    subModels: [
+                        { name: "일반형", warpSpeed: 5200, cost: 8, image: "ac721_standard.png" },
+                        { name: "미사일형", warpSpeed: 5200, cost: 8, image: "ac721_missile.png" },
+                        { name: "수송형", warpSpeed: 5200, cost: 12, image: "ac721_transport.png" }
+                    ]
+                }
+            ],
+            "순양함": [
+                {
+                    name: "라이트콘",
+                    subModels: [
+                        { name: "일반형", warpSpeed: 2925, cost: 20, image: "lightcone_standard.png" },
+                        { name: "방공형", warpSpeed: 2925, cost: 20, image: "lightcone_aa.png" },
+                        { name: "돌격형", warpSpeed: 2925, cost: 20, image: "lightcone_assault.png" }
+                    ]
+                },
+                {
+                    name: "키메라",
+                    subModels: [
+                        { name: "탄도형", warpSpeed: 2587, cost: 18, image: "chimera_ballistic.png" },
+                        { name: "중형캐논형", warpSpeed: 2587, cost: 20, image: "chimera_medium_cannon.png" },
+                        { name: "방어형", warpSpeed: 2587, cost: 20, image: "chimera_defense.png" }
+                    ]
+                },
+                {
+                    name: "코나마라 카오스",
+                    subModels: [
+                        { name: "레일건형", warpSpeed: 2925, cost: 20, image: "conamara_chaos_railgun.png" },
+                        { name: "플라즈마형", warpSpeed: 2925, cost: 20, image: "conamara_chaos_plasma.png" }
+                    ]
+                },
+                {
+                    name: "칼리스토",
+                    subModels: [
+                        { name: "어뢰형", warpSpeed: 2600, cost: 20, image: "callisto_torpedo.png" },
+                        { name: "대함형", warpSpeed: 2600, cost: 20, image: "callisto_anti_ship.png" },
+                        { name: "지원형", warpSpeed: 2600, cost: 20, image: "callisto_support.png" }
+                    ]
+                },
+                {
+                    name: "이오",
+                    subModels: [
+                        { name: "이온캐논형", warpSpeed: 3737, cost: 20, image: "io_ion.png" },
+                        { name: "대함형", warpSpeed: 3737, cost: 20, image: "io_anti_ship.png" },
+                        { name: "공성형", warpSpeed: 3737, cost: 20, image: "io_siege.png" }
+                    ]
+                },
+                {
+                    name: "예거",
+                    subModels: [
+                        { name: "지원형", warpSpeed: 3250, cost: 20, image: "jaeger_support.png" },
+                        { name: "대함형", warpSpeed: 3250, cost: 18, image: "jaeger_anti_ship.png" }
+                    ]
+                },
+                {
+                    name: "레인저",
+                    subModels: [
+                        { name: "종합형", warpSpeed: 3250, cost: 18, image: "ranger_comprehensive.png" },
+                        { name: "이온캐논형", warpSpeed: 2600, cost: 18, image: "ranger_ion.png" }
+                    ]
+                },
+                {
+                    name: "프레데터",
+                    subModels: [
+                        { name: "일반형", warpSpeed: 3250, cost: 18, image: "predator_standard.png" },
+                        { name: "전술형", warpSpeed: 3250, cost: 18, image: "predator_tactical.png" },
+                        { name: "방공형", warpSpeed: 3250, cost: 18, image: "predator_aa.png" }
+                    ]
+                },
+                {
+                    name: "카스",
+                    subModels: [
+                        { name: "종합형", warpSpeed: 3250, cost: 18, image: "kas_comprehensive.png" },
+                        { name: "포격형", warpSpeed: 3250, cost: 18, image: "kas_artillery.png" },
+                        { name: "수송형", warpSpeed: 3250, cost: 18, image: "kas_transport.png" },
+                        { name: "지원형", warpSpeed: 3250, cost: 18, image: "kas_support.png" }
+                    ]
+                },
+                {
+                    name: "KCCPV2.0",
+                    subModels: [
+                        { name: "종합형", warpSpeed: 4225, cost: 16, image: "kccpv2_comprehensive.png" },
+                        { name: "펄스캐논형", warpSpeed: 4225, cost: 16, image: "kccpv2_pulse.png" },
+                        { name: "레일건형", warpSpeed: 4225, cost: 16, image: "kccpv2_railgun.png" },
+                        { name: "수송형", warpSpeed: 4225, cost: 16, image: "kccpv2_transport.png" }
+                    ]
+                }
+            ],
+            "전투순양함": [
+                {
+                    name: "플루투스의 방패",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 1625, cost: 35, image: "plutus_shield_standard.png" }
+                    ]
+                },
+                {
+                    name: "우라노스의 창",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 1625, cost: 35, image: "uranus_lance_standard.png" }
+                    ]
+                },
+                {
+                    name: "이터널 스톰",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2925, cost: 32, image: "eternal_storm_standard.png" }
+                    ]
+                },
+                {
+                    name: "콘스탄티누스 대제",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2600, cost: 35, image: "constantinus_the_great_standard.png" }
+                    ]
+                },
+                {
+                    name: "썬더볼트의 별",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2600, cost: 35, image: "thunderbolt_star_standard.png" }
+                    ]
+                },
+                {
+                    name: "ST59",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2925, cost: 28, image: "st59_battlecruiser_standard.png" }
+                    ]
+                }
+            ],
+            "항공모함": [
+                {
+                    name: "에버 스카이",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2275, cost: 40, image: "ever_sky_standard.png" }
+                    ]
+                },
+                {
+                    name: "마샬크럭스",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2600, cost: 40, image: "marshall_crux_standard.png" }
+                    ]
+                },
+                {
+                    name: "솔라 웨일",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 1625, cost: 55, image: "solar_whale_standard.png" }
+                    ]
+                },
+                {
+                    name: "CV3000",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2600, cost: 40, image: "cv3000_standard.png" }
+                    ]
+                }
+            ],
+            "지원함": [
+                {
+                    name: "에디아카라",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 2730, cost: 40, image: "ediakara_standard.png" }
+                    ]
+                },
+                {
+                    name: "FSV830",
+                    subModels: [
+                        { name: "표준형", warpSpeed: 3640, cost: 0, image: "fsv830_standard.png" } // 코스트 정보 없음
+                    ]
+                }
+            ]
+        };
+
+        let shipSelectionCounter = 0;
+        const reinforcementLimit = 5;
+        let reinforcementCount = 0;
+        const shipTypes = Object.keys(shipsData);
+
+        function calculateTotalCost() {
+            let totalCost = 0;
+            let reinforcementShips = 0;
+            const shipSelections = document.querySelectorAll(".ship-selection");
+
+            shipSelections.forEach(selection => {
+                const shipTypeSelect = selection.querySelector("select[id^='ship-type-']");
+                const shipNameSelect = selection.querySelector("select[id^='ship-name-']");
+                const subModelSelect = selection.querySelector("select[id^='sub-model-']");
+                const quantityInput = selection.querySelector("input[type='number']");
+                const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
+
+                if (shipTypeSelect && shipTypeSelect.value !== "" && shipNameSelect && shipNameSelect.value !== "" && subModelSelect && subModelSelect.value !== "" && quantityInput) {
+                    const selectedShipTypeName = shipTypeSelect.value;
+                    const selectedShipName = shipNameSelect.value;
+                    const selectedSubModelIndex = parseInt(subModelSelect.value);
+                    const quantity = parseInt(quantityInput.value);
+
+                    const selectedShipTypeData = shipsData[selectedShipTypeName];
+                    const selectedShip = selectedShipTypeData.find(ship => ship.name === selectedShipName);
+
+                    if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
+                        const subModel = selectedShip.subModels[selectedSubModelIndex];
+                        if (!reinforcementCheckbox.checked || reinforcementShips >= reinforcementLimit) {
+                            totalCost += subModel.cost * quantity;
+                        } else if (reinforcementCheckbox.checked) {
+                            reinforcementShips += quantity;
+                        }
+                    }
+                }
+            });
+
+            const costDisplay = document.getElementById("cost-display");
+            costDisplay.innerText = `현재 코스트: ${totalCost}`;
+            if (totalCost > 400) {
+                costDisplay.classList.add("warning");
+            } else {
+                costDisplay.classList.remove("warning");
+            }
+            return totalCost;
+        }
+
+        function addShipSelection() {
+            shipSelectionCounter++;
+            const container = document.getElementById("shipSelections");
+            const div = document.createElement("div");
+            div.classList.add("ship-selection");
+            div.innerHTML = `
+                <label for="ship-type-${shipSelectionCounter}">함종:</label>
+                <select id="ship-type-${shipSelectionCounter}" onchange="populateShipNames(${shipSelectionCounter}); calculateTotalCost();">
+                    <option value="">선택하세요</option>
+                    ${shipTypes.map(type => `<option value="${type}">${type}</option>`).join('')}
+                </select>
+                <label for="ship-name-${shipSelectionCounter}">함선:</label>
+                <select id="ship-name-${shipSelectionCounter}" onchange="populateSubModels(${shipSelectionCounter}); calculateTotalCost();">
+                    <option value="">선택하세요</option>
+                </select>
+                <label for="sub-model-${shipSelectionCounter}">서브모델:</label>
+                <select id="sub-model-${shipSelectionCounter}" onchange="updateShipInfo(${shipSelectionCounter}); calculateTotalCost();">
+                    <option value="">선택하세요</option>
+                </select>
+                <div id="ship-info-${shipSelectionCounter}"></div>
+                <label for="quantity-${shipSelectionCounter}">갯수:</label>
+                <input type="number" id="quantity-${shipSelectionCounter}" value="1" min="1" onchange="calculateTotalCost()">
+                <div class="reinforcement-container">
+                    <input type="checkbox" id="reinforcement-${shipSelectionCounter}" onclick="toggleReinforcement(${shipSelectionCounter}); calculateTotalCost();">
+                    <label for="reinforcement-${shipSelectionCounter}">증원</label>
+                </div>
+            `;
+            container.appendChild(div);
+            calculateTotalCost(); // 새 함선 추가 후 코스트 계산
+        }
+
+        function populateShipNames(id) {
+            const shipTypeSelect = document.getElementById(`ship-type-${id}`);
+            const shipNameSelect = document.getElementById(`ship-name-${id}`);
+            const selectedShipType = shipTypeSelect.value;
+
+            // 함선 이름 드롭다운 초기화
+            shipNameSelect.innerHTML = '<option value="">선택하세요</option>';
+
+            if (selectedShipType && shipsData[selectedShipType]) {
+                shipsData[selectedShipType].forEach(ship => {
+                    const option = document.createElement("option");
+                    option.value = ship.name;
+                    option.textContent = ship.name;
+                    shipNameSelect.appendChild(option);
+                });
+            } else {
+                document.getElementById(`sub-model-${id}`).innerHTML = '<option value="">선택하세요</option>';
+                document.getElementById(`ship-info-${id}`).innerHTML = "";
+            }
+            // 함선 종류가 바뀌면 서브모델 드롭다운도 초기화
+            document.getElementById(`sub-model-${id}`).innerHTML = '<option value="">선택하세요</option>';
+            document.getElementById(`ship-info-${id}`).innerHTML = "";
+        }
+
+        function populateSubModels(id) {
+            const shipTypeSelect = document.getElementById(`ship-type-${id}`);
+            const shipNameSelect = document.getElementById(`ship-name-${id}`);
+            const subModelSelect = document.getElementById(`sub-model-${id}`);
+            const selectedShipType = shipTypeSelect.value;
+            const selectedShipName = shipNameSelect.value;
+
+            // 서브모델 드롭다운 초기화
+            subModelSelect.innerHTML = '<option value="">선택하세요</option>';
+
+            if (selectedShipType && shipsData[selectedShipType]) {
+                const selectedShip = shipsData[selectedShipType].find(ship => ship.name === selectedShipName);
+                if (selectedShip && selectedShip.subModels) {
+                    selectedShip.subModels.forEach((subModel, index) => {
+                        const option = document.createElement("option");
+                        option.value = index;
+                        option.textContent = subModel.name;
+                        subModelSelect.appendChild(option);
+                    });
+                }
+            } else {
+                document.getElementById(`ship-info-${id}`).innerHTML = "";
+            }
+            updateShipInfo(id);
+        }
+
+        function updateShipInfo(id) {
+            const shipTypeSelect = document.getElementById(`ship-type-${id}`);
+            const shipNameSelect = document.getElementById(`ship-name-${id}`);
+            const subModelSelect = document.getElementById(`sub-model-${id}`);
+            const infoDiv = document.getElementById(`ship-info-${id}`);
+
+            const selectedShipTypeName = shipTypeSelect.value;
+            const selectedShipName = shipNameSelect.value;
+            const selectedSubModelIndex = parseInt(subModelSelect.value);
+
+            if (selectedShipTypeName && shipsData[selectedShipTypeName]) {
+                const selectedShip = shipsData[selectedShipTypeName].find(ship => ship.name === selectedShipName);
+                if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
+                    const subModel = selectedShip.subModels[selectedSubModelIndex];
+                    infoDiv.innerHTML = `
+                        <div class="ship-info">
+                            <img src="img1/${subModel.image}" alt="${selectedShipName} ${subModel.name}">
+                            <div>
+                                <p>이름: ${selectedShipName} (${subModel.name})</p>
+                                <p>워프 속도: ${subModel.warpSpeed}</p>
+                                <p>코스트: ${subModel.cost}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    infoDiv.innerHTML = "";
+                }
+            } else {
+                infoDiv.innerHTML = "";
+            }
+        }
+
+        function toggleReinforcement(id) {
+            const checkbox = document.getElementById(`reinforcement-${id}`);
+            if (checkbox.checked) {
+                if (reinforcementCount < reinforcementLimit) {
+                    reinforcementCount++;
+                } else {
+                    alert(`증원 함선은 최대 ${reinforcementLimit}대까지 선택 가능합니다.`);
+                    checkbox.checked = false;
+                }
+            } else {
+                reinforcementCount--;
+            }
+        }
+
+        function calculateFG() {
+            let totalWarpSpeed = 0;
+            let totalShips = 0;
+            const totalCost = calculateTotalCost(); // 최신 코스트를 가져옴
+            let reinforcementShips = 0;
+
+            const shipSelections = document.querySelectorAll(".ship-selection");
+            shipSelections.forEach(selection => {
+                const shipTypeSelect = selection.querySelector("select[id^='ship-type-']");
+                const shipNameSelect = selection.querySelector("select[id^='ship-name-']");
+                const subModelSelect = selection.querySelector("select[id^='sub-model-']");
+                const quantityInput = selection.querySelector("input[type='number']");
+                const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
+
+                if (shipTypeSelect && shipTypeSelect.value !== "" && shipNameSelect && shipNameSelect.value !== "" && subModelSelect && subModelSelect.value !== "" && quantityInput) {
+                    const selectedShipTypeName = shipTypeSelect.value;
+                    const selectedShipName = shipNameSelect.value;
+                    const selectedSubModelIndex = parseInt(subModelSelect.value);
+                    const quantity = parseInt(quantityInput.value);
+
+                    const selectedShipTypeData = shipsData[selectedShipTypeName];
+                    const selectedShip = selectedShipTypeData.find(ship => ship.name === selectedShipName);
+
+                    if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
+                        const subModel = selectedShip.subModels[selectedSubModelIndex];
+                        totalWarpSpeed += subModel.warpSpeed * quantity;
+                        totalShips += quantity;
+
+                        if (reinforcementCheckbox.checked) {
+                            reinforcementShips += quantity;
+                        }
+                    }
+                }
+            });
+
+            const targetWarpSpeed = 4240;
+            const fgWarpSpeed = 5000;
+
+            if (totalShips > 0) {
+                const requiredFG = Math.ceil((totalShips * targetWarpSpeed - totalWarpSpeed) / (fgWarpSpeed - targetWarpSpeed));
+
+                let resultText = `현재 평균 워프 속도: ${(totalWarpSpeed / totalShips).toFixed(2)}<br>`;
+                resultText += `목표 평균 워프 속도(${targetWarpSpeed})를 맞추기 위해 FG ${requiredFG > 0 ? requiredFG : 0}대가 필요합니다.<br>`;
+                resultText += `총 코스트: ${totalCost}`;
+
+                const resultDiv = document.getElementById("result");
+                resultDiv.innerHTML = resultText;
+
+                if (totalCost > 400) {
+                    resultDiv.classList.add("warning");
+                } else {
+                    resultDiv.classList.remove("warning");
+                }
+            } else {
+                document.getElementById("result").innerText = "선택된 함선이 없습니다.";
+            }
+        }
+
+        // 초기 함선 선택 영역 추가 및 초기 코스트 계산
+        addShipSelection();a
+    </script>
+</body>
+</html>
