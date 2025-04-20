@@ -45,6 +45,11 @@
         #reinforcement-info { font-weight: bold; color: #17a2b8; margin-left: 10px; }
         .error-placeholder { color: #dc3545; font-style: italic; }
         #max-cost-input, #target-warp-input { width: 80px; /* 입력 필드 너비 조정 */ }
+        .recommendation-note { /* 추천 문구 스타일 */
+            font-size: 0.9em;
+            color: #6c757d; /* 회색 계열 */
+            margin-left: 0px; /* 입력 필드와의 간격 제거 (gap으로 처리) */
+        }
     </style>
 </head>
 <body>
@@ -64,6 +69,7 @@
         <div class="control-group">
             <label for="target-warp-input">목표 워프 속도:</label>
             <input type="number" id="target-warp-input" value="4240" min="0" step="1" oninput="updateTargetWarpSpeed()">
+            <small class="recommendation-note">(4000-4500 사이를 추천합니다.)</small>
         </div>
     </div>
 
@@ -156,7 +162,17 @@
                         { name: "중형캐논형", warpSpeed: 5462, cost: 5, image: "carillon_medium_cannon.png" },
                         { name: "특수형", warpSpeed: 6760, cost: 5, image: "carillon_special.png" }
                     ]
+                },
+                 { # 지르콘 데이터 추가
+                    name: "지르콘",
+                    subModels: [
+                        { name: "펄스형", warpSpeed: 6000, cost: 5, image: "zircon_pulse.png" },
+                        { name: "레일건형", warpSpeed: 6000, cost: 5, image: "zircon_railgun.png" },
+                        { name: "방공형", warpSpeed: 6000, cost: 5, image: "zircon_aa.png" }
+                    ]
                 }
+
+
             ],
             "구축함": [
                 {
@@ -817,3 +833,4 @@
     </script>
 </body>
 </html>
+
