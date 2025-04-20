@@ -44,7 +44,7 @@
         .control-panel button.active { background-color: #28a745; }
         #reinforcement-info { font-weight: bold; color: #17a2b8; margin-left: 10px; }
         .error-placeholder { color: #dc3545; font-style: italic; }
-        #max-cost-input { width: 80px; }
+        #max-cost-input, #target-warp-input { width: 80px; /* 입력 필드 너비 조정 */ }
     </style>
 </head>
 <body>
@@ -61,6 +61,10 @@
             <label for="max-cost-input">본인의 단일함대 최대 지휘포인트:</label>
             <input type="number" id="max-cost-input" value="400" min="0" oninput="updateMaxCost()">
         </div>
+        <div class="control-group">
+            <label for="target-warp-input">목표 워프 속도:</label>
+            <input type="number" id="target-warp-input" value="4240" min="0" step="1" oninput="updateTargetWarpSpeed()">
+        </div>
     </div>
 
     <div id="shipSelections">
@@ -69,7 +73,7 @@
     <button onclick="addShipSelection()">함선 추가</button>
     <button onclick="calculateBestFG()">최적 FG 조합 계산</button>
 
-    <div id="cost-display">현재 코스트: 0</div>
+    <div id="cost-display">현재 지휘포인트: 0</div>
     <div id="result"></div>
 
     <script>
@@ -388,12 +392,12 @@
 
         let shipSelectionCounter = 0;
         let currentReinforcementLimit = 5;
-        let currentMaxCost = 400; // '최대 지휘 포인트'로 사용됨
+        let currentMaxCost = 400; // 최대 지휘 포인트
+        let currentTargetWarpSpeed = 4240; // 목표 워프 속도
         const shipTypes = Object.keys(shipsData);
         const multipurposeFGWarpSpeed = 5750;
         const reconFGWarpSpeed = 6760;
         const fgCost = 3;
-        const targetWarpSpeed = 4240;
         const maxFGCount = 15;
         const imagePlaceholderBaseUrl = "https://placehold.co/50x50/cccccc/ffffff?text=No+Img";
 
@@ -428,6 +432,22 @@
                 }
             } else {
                 console.warn("유효하지 않은 최대 지휘 포인트 값:", inputElement.value);
+            }
+        }
+
+        // 목표 워프 속도 업데이트
+        function updateTargetWarpSpeed() {
+            const inputElement = document.getElementById('target-warp-input');
+            const newTargetSpeed = parseInt(inputElement.value); // 정수로 처리
+            if (!isNaN(newTargetSpeed) && newTargetSpeed >= 0) {
+                currentTargetWarpSpeed = newTargetSpeed;
+                // FG 결과가 표시된 상태라면 즉시 재계산하여 반영
+                const resultDiv = document.getElementById("result");
+                if (resultDiv.innerHTML.includes("최적 조합:")) {
+                    calculateBestFG();
+                }
+            } else {
+                console.warn("유효하지 않은 목표 워프 속도 값:", inputElement.value);
             }
         }
 
@@ -479,7 +499,7 @@
         }
 
 
-        // 총 코스트(지휘 포인트) 계산
+        // 총 지휘 포인트 계산
         function calculateTotalCost(multipurposeFGCount = 0, reconFGCount = 0) {
             let calculatedCost = 0;
             let usedReinforcementSlots = 0;
@@ -517,9 +537,9 @@
 
             const costDisplay = document.getElementById("cost-display");
             if (multipurposeFGCount === 0 && reconFGCount === 0) {
-                 costDisplay.innerText = `현재 지휘포인트: ${calculatedCost}`; // 레이블 변경
+                 costDisplay.innerText = `현재 지휘포인트: ${calculatedCost}`;
             }
-            costDisplay.classList.toggle("warning", calculatedCost > currentMaxCost); // currentMaxCost 기준으로 경고
+            costDisplay.classList.toggle("warning", calculatedCost > currentMaxCost);
 
             updateReinforcementInfo();
 
@@ -649,7 +669,8 @@
                             <div>
                                 <p><strong>${selectedShipName} (${subModel.name})</strong></p>
                                 <p>워프 속도: ${subModel.warpSpeed || 'N/A'}</p>
-                                <p>지휘 포인트: ${subModel.cost || 'N/A'}</p> </div>
+                                <p>지휘 포인트: ${subModel.cost || 'N/A'}</p>
+                            </div>
                         </div>
                     `;
                  } else {
@@ -728,13 +749,15 @@
             let bestReconFGCount = -1;
             let minWarpSpeedDiff = Infinity;
 
+            // FG 조합 탐색: 목표 워프 속도(currentTargetWarpSpeed) 기준
             for (let mpFG = 0; mpFG <= maxFGCount; mpFG++) {
                 for (let rFG = 0; rFG <= maxFGCount; rFG++) {
                     const currentTotalWarpSpeed = totalShipWarpSpeed + mpFG * multipurposeFGWarpSpeed + rFG * reconFGWarpSpeed;
                     const currentTotalShips = totalShips + mpFG + rFG;
                     if (currentTotalShips > 0) {
                         const currentAverageWarpSpeed = currentTotalWarpSpeed / currentTotalShips;
-                        const warpSpeedDiff = Math.abs(currentAverageWarpSpeed - targetWarpSpeed);
+                        // currentTargetWarpSpeed 사용
+                        const warpSpeedDiff = Math.abs(currentAverageWarpSpeed - currentTargetWarpSpeed);
                         if (warpSpeedDiff < minWarpSpeedDiff) {
                             minWarpSpeedDiff = warpSpeedDiff;
                             bestMultipurposeFGCount = mpFG;
@@ -750,7 +773,8 @@
             }
 
              if (bestMultipurposeFGCount === -1) {
-                 resultDiv.innerHTML = `선택된 함선 평균 워프 속도: ${baseAverageWarpSpeed.toFixed(2)}<br>목표 속도(${targetWarpSpeed})에 근접하는 FG 조합을 찾지 못했습니다.`;
+                 // currentTargetWarpSpeed 사용
+                 resultDiv.innerHTML = `선택된 함선 평균 워프 속도: ${baseAverageWarpSpeed.toFixed(2)}<br>목표 속도(${currentTargetWarpSpeed})에 근접하는 FG 조합을 찾지 못했습니다.`;
                  calculateTotalCost(0, 0);
                  return;
              }
@@ -759,32 +783,30 @@
             const finalTotalShips = totalShips + bestMultipurposeFGCount + bestReconFGCount;
             const finalAverageWarpSpeed = finalTotalShips > 0 ? finalTotalWarpSpeed / finalTotalShips : 0;
 
-            // FG 제외 함선 지휘 포인트 (증원 적용됨)
             const baseShipCost = calculateTotalCost(0, 0);
-            // FG 지휘 포인트
             const totalFGCost = (bestMultipurposeFGCount + bestReconFGCount) * fgCost;
-            // 최종 총 지휘 포인트
             const finalTotalCost = baseShipCost + totalFGCost;
 
             let resultText = `선택된 함선 평균 워프 속도 (FG 제외): ${baseAverageWarpSpeed.toFixed(2)}<br>`;
             resultText += `<b>최적 조합: 다기능형 FG ${bestMultipurposeFGCount}대, 정찰형 FG ${bestReconFGCount}대</b><br>`;
-            resultText += `결과 평균 워프 속도: <b>${finalAverageWarpSpeed.toFixed(2)}</b> (목표: ${targetWarpSpeed})<br>`;
-            resultText += `FG 총 지휘포인트: ${totalFGCost}<br>`; // 레이블 변경
-            resultText += `현재 지휘포인트 (함선, 증원 제외): ${baseShipCost}<br>`; // 레이블 변경
-            resultText += `<b>총 지휘포인트 (함선 + FG): ${finalTotalCost}</b>`; // 레이블 변경
+            // currentTargetWarpSpeed 사용
+            resultText += `결과 평균 워프 속도: <b>${finalAverageWarpSpeed.toFixed(2)}</b> (목표: ${currentTargetWarpSpeed})<br>`;
+            resultText += `FG 총 지휘포인트: ${totalFGCost}<br>`;
+            resultText += `현재 지휘포인트 (함선, 증원 제외): ${baseShipCost}<br>`;
+            resultText += `<b>총 지휘포인트 (함선 + FG): ${finalTotalCost}</b>`;
 
             resultDiv.innerHTML = resultText;
 
-            // 최종 지휘 포인트 표시 및 경고 업데이트
             const costDisplay = document.getElementById("cost-display");
-            costDisplay.innerText = `총 지휘포인트: ${finalTotalCost}`; // 레이블 변경
-            costDisplay.classList.toggle("warning", finalTotalCost > currentMaxCost); // currentMaxCost 기준 경고
+            costDisplay.innerText = `총 지휘포인트: ${finalTotalCost}`;
+            costDisplay.classList.toggle("warning", finalTotalCost > currentMaxCost);
             resultDiv.classList.toggle("warning", finalTotalCost > currentMaxCost);
         }
 
         // 초기화
         function initializeCalculator() {
             document.getElementById('max-cost-input').value = currentMaxCost;
+            document.getElementById('target-warp-input').value = currentTargetWarpSpeed; // 목표 워프 속도 필드 초기화
             setReinforcementLimit(5);
             addShipSelection();
         }
