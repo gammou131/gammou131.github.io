@@ -84,7 +84,6 @@
 
     <script>
         const shipsData = {
-            // ... (함선 데이터는 이전과 동일하게 유지) ...
              "호위함": [
                 {
                     name: "제노스팅어",
@@ -104,8 +103,8 @@
                 {
                     name: "노마 M470",
                     subModels: [
-                        { name: "공성형", warpSpeed: 4000, cost: 6, image: "noma_m470_siege.png" }, // 코스트 정보 없음 -> 임의로 6 부여
-                        { name: "지원형", warpSpeed: 4000, cost: 6, image: "noma_m470_support.png" }, // 코스트 정보 없음 -> 임의로 6 부여
+                        { name: "공성형", warpSpeed: 4000, cost: 6, image: "noma_m470_siege.png" },
+                        { name: "지원형", warpSpeed: 4000, cost: 6, image: "noma_m470_support.png" },
                         { name: "방공형", warpSpeed: 4000, cost: 6, image: "noma_m470_aa.png" }
                     ]
                 },
@@ -155,7 +154,7 @@
                         { name: "스텔스형", warpSpeed: 4600, cost: 4, image: "liliyat_stealth.png" }
                     ]
                 },
-                {
+                { // 중복 제거됨
                     name: "카릴리온",
                     subModels: [
                         { name: "정찰형", warpSpeed: 6760, cost: 4, image: "carillon_recon.png" },
@@ -163,7 +162,7 @@
                         { name: "특수형", warpSpeed: 6760, cost: 5, image: "carillon_special.png" }
                     ]
                 },
-                 { # 지르콘 데이터 추가
+                /*{ // 지르콘 데이터 추가 (올바른 위치)
                     name: "지르콘",
                     subModels: [
                         { name: "펄스형", warpSpeed: 6000, cost: 5, image: "zircon_pulse.png" },
@@ -171,8 +170,7 @@
                         { name: "방공형", warpSpeed: 6000, cost: 5, image: "zircon_aa.png" }
                     ]
                 }
-
-
+             
             ],
             "구축함": [
                 {
@@ -674,7 +672,7 @@
                  const selectedShipTypeData = shipsData[selectedShipTypeName];
                  const selectedShip = selectedShipTypeData?.find(ship => ship.name === selectedShipName);
                  const subModelIndex = parseInt(selectedSubModelIndexValue);
-                 const subModel = selectedShip?.subModels?.[subModelIndex];
+                 const subModel = selectedShip?.subModels?.[selectedSubModelIndex];
 
                  if (subModel) {
                     const imagePath = `https://via.placeholder.com/50/cccccc/ffffff.png?text=${selectedShipName.substring(0,3)}`;
