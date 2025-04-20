@@ -3,18 +3,65 @@
 <head>
     <title>함선 워프 속도 계산기</title>
     <style>
-        body { font-family: sans-serif; }
-        .ship-selection { margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; }
+        body { font-family: sans-serif; padding: 15px; }
+        h1 .title-note { /* 제목 옆 설명 스타일 */
+            font-size: 0.6em;
+            color: #555;
+            font-weight: normal;
+            margin-left: 5px; /* 제목과의 간격 */
+        }
+        .ship-selection { margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 8px; background-color: #f9f9f9; }
         .ship-info { display: flex; align-items: center; margin-bottom: 5px; }
-        .ship-info img { width: 50px; height: 50px; margin-right: 10px; }
-        .reinforcement-container { margin-left: 10px; }
+        .ship-info img { width: 50px; height: 50px; margin-right: 10px; border-radius: 4px; object-fit: cover; /* 이미지 비율 유지 */ }
+        .reinforcement-container { margin-left: 10px; display: inline-block; }
         #cost-display { margin-top: 10px; font-weight: bold; }
-        #result { margin-top: 20px; font-weight: bold; }
+        #result { margin-top: 20px; font-weight: bold; border-top: 1px solid #eee; padding-top: 15px; }
         .warning { color: red; }
+        label { margin-right: 5px; }
+        select, input[type="number"] { margin-right: 10px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        button { padding: 8px 15px; margin-right: 5px; border: none; border-radius: 4px; background-color: #007bff; color: white; cursor: pointer; transition: background-color 0.2s; /* 부드러운 효과 */ }
+        button:hover { background-color: #0056b3; }
+        button.remove-btn { background-color: #dc3545; } /* 삭제 버튼 스타일 */
+        button.remove-btn:hover { background-color: #c82333; }
+        .control-panel {
+            margin-bottom: 20px;
+            padding: 15px; /* 패딩 조정 */
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #eee;
+            display: flex;
+            flex-direction: column; /* 세로 정렬 */
+            gap: 10px; /* 각 컨트롤 그룹 사이 간격 */
+        }
+        .control-group { /* 각 컨트롤 라인을 그룹화 */
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* 작은 화면에서 줄바꿈 허용 */
+            gap: 5px;
+        }
+        .control-panel label { margin-bottom: 0; }
+        .control-panel button { background-color: #6c757d; }
+        .control-panel button.active { background-color: #28a745; }
+        #reinforcement-info { font-weight: bold; color: #17a2b8; margin-left: 10px; }
+        .error-placeholder { color: #dc3545; font-style: italic; }
+        #max-cost-input { width: 80px; }
     </style>
 </head>
 <body>
-    <h1>함선 워프 속도 계산기</h1>
+    <h1>함선 워프 속도 계산기 <small class="title-note">(본 계산기는 함선별 최대 워프 속도를 기준으로 합니다.)</small></h1>
+
+    <div class="control-panel">
+        <div class="control-group">
+            <label>증원 한도:</label>
+            <button id="limit-5" onclick="setReinforcementLimit(5)">5대</button>
+            <button id="limit-9" onclick="setReinforcementLimit(9)">9대</button>
+            <div id="reinforcement-info">남은 슬롯: 5</div>
+        </div>
+        <div class="control-group">
+            <label for="max-cost-input">본인의 단일함대 최대 지휘포인트:</label>
+            <input type="number" id="max-cost-input" value="400" min="0" oninput="updateMaxCost()">
+        </div>
+    </div>
 
     <div id="shipSelections">
         </div>
@@ -22,12 +69,13 @@
     <button onclick="addShipSelection()">함선 추가</button>
     <button onclick="calculateBestFG()">최적 FG 조합 계산</button>
 
-    <div id="cost-display"></div>
+    <div id="cost-display">현재 코스트: 0</div>
     <div id="result"></div>
 
     <script>
         const shipsData = {
-            "호위함": [
+            // ... (함선 데이터는 이전과 동일하게 유지) ...
+             "호위함": [
                 {
                     name: "제노스팅어",
                     subModels: [
@@ -46,8 +94,8 @@
                 {
                     name: "노마 M470",
                     subModels: [
-                        { name: "공성형", warpSpeed: 4000, cost: 6, image: "noma_m470_siege.png" }, // 코스트 정보 없음
-                        { name: "지원형", warpSpeed: 4000, cost: 6, image: "noma_m470_support.png" }, // 코스트 정보 없음
+                        { name: "공성형", warpSpeed: 4000, cost: 6, image: "noma_m470_siege.png" }, // 코스트 정보 없음 -> 임의로 6 부여
+                        { name: "지원형", warpSpeed: 4000, cost: 6, image: "noma_m470_support.png" }, // 코스트 정보 없음 -> 임의로 6 부여
                         { name: "방공형", warpSpeed: 4000, cost: 6, image: "noma_m470_aa.png" }
                     ]
                 },
@@ -332,25 +380,109 @@
                 {
                     name: "FSV830",
                     subModels: [
-                        { name: "표준형", warpSpeed: 3640, cost: 0, image: "fsv830_standard.png" } // 코스트 정보 없음
+                        { name: "표준형", warpSpeed: 3640, cost: 0, image: "fsv830_standard.png" } // 코스트 정보 없음 -> 0으로 유지
                     ]
                 }
             ]
         };
 
         let shipSelectionCounter = 0;
-        const reinforcementLimit = 5;
-        let reinforcementCount = 0;
+        let currentReinforcementLimit = 5;
+        let currentMaxCost = 400; // '최대 지휘 포인트'로 사용됨
         const shipTypes = Object.keys(shipsData);
         const multipurposeFGWarpSpeed = 5750;
         const reconFGWarpSpeed = 6760;
-        const fgCost = 3; // FG 코스트 (다기능형, 정찰형 동일하다고 가정)
+        const fgCost = 3;
         const targetWarpSpeed = 4240;
         const maxFGCount = 15;
+        const imagePlaceholderBaseUrl = "https://placehold.co/50x50/cccccc/ffffff?text=No+Img";
 
+        // 이미지 로딩 실패 처리
+        function handleImageError(imgElement) {
+            console.warn(`이미지 로드 실패: ${imgElement.src}. 플레이스홀더 사용.`);
+            imgElement.src = imagePlaceholderBaseUrl;
+            imgElement.onerror = null;
+        }
+
+        // 증원 한도 설정
+        function setReinforcementLimit(limit) {
+            currentReinforcementLimit = limit;
+            document.getElementById('limit-5').classList.toggle('active', limit === 5);
+            document.getElementById('limit-9').classList.toggle('active', limit === 9);
+            updateReinforcementInfo();
+            calculateTotalCost();
+            validateReinforcementSelection();
+        }
+
+        // 최대 지휘 포인트 업데이트
+        function updateMaxCost() {
+            const inputElement = document.getElementById('max-cost-input');
+            const newMaxCost = parseInt(inputElement.value);
+            if (!isNaN(newMaxCost) && newMaxCost >= 0) {
+                currentMaxCost = newMaxCost;
+                const resultDiv = document.getElementById("result");
+                if (resultDiv.innerHTML.includes("최적 조합:")) {
+                     calculateBestFG();
+                } else {
+                     calculateTotalCost();
+                }
+            } else {
+                console.warn("유효하지 않은 최대 지휘 포인트 값:", inputElement.value);
+            }
+        }
+
+
+        // 남은 증원 슬롯 업데이트
+        function updateReinforcementInfo() {
+            let usedReinforcementSlots = 0;
+            const shipSelections = document.querySelectorAll(".ship-selection");
+            shipSelections.forEach(selection => {
+                const quantityInput = selection.querySelector("input[type='number']");
+                const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
+                if (reinforcementCheckbox?.checked && quantityInput) {
+                    usedReinforcementSlots += parseInt(quantityInput.value) || 0;
+                }
+            });
+            const remainingSlots = currentReinforcementLimit - usedReinforcementSlots;
+            const infoDiv = document.getElementById("reinforcement-info");
+            infoDiv.innerText = `남은 슬롯: ${remainingSlots}`;
+            infoDiv.classList.toggle('warning', remainingSlots < 0);
+        }
+
+        // 증원 선택 유효성 검사
+        function validateReinforcementSelection() {
+            let usedReinforcementSlots = 0;
+            const shipSelections = document.querySelectorAll(".ship-selection");
+            let excessShipsRemoved = false;
+
+            shipSelections.forEach(selection => {
+                const quantityInput = selection.querySelector("input[type='number']");
+                const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
+                const quantity = parseInt(quantityInput.value) || 0;
+
+                if (reinforcementCheckbox?.checked && quantityInput) {
+                    if (usedReinforcementSlots + quantity > currentReinforcementLimit) {
+                        reinforcementCheckbox.checked = false;
+                        excessShipsRemoved = true;
+                        console.warn(`증원 한도(${currentReinforcementLimit}) 초과로 함선(${selection.id})의 증원 설정을 해제했습니다.`);
+                    } else {
+                        usedReinforcementSlots += quantity;
+                    }
+                }
+            });
+
+            if (excessShipsRemoved) {
+                alert(`변경된 증원 한도(${currentReinforcementLimit}대)에 맞게 일부 함선의 증원 설정이 해제되었습니다.`);
+                updateReinforcementInfo();
+                calculateTotalCost();
+            }
+        }
+
+
+        // 총 코스트(지휘 포인트) 계산
         function calculateTotalCost(multipurposeFGCount = 0, reconFGCount = 0) {
-            let totalCost = 0;
-            let reinforcementShips = 0;
+            let calculatedCost = 0;
+            let usedReinforcementSlots = 0;
             const shipSelections = document.querySelectorAll(".ship-selection");
 
             shipSelections.forEach(selection => {
@@ -360,120 +492,136 @@
                 const quantityInput = selection.querySelector("input[type='number']");
                 const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
 
-                if (shipTypeSelect && shipTypeSelect.value !== "" && shipNameSelect && shipNameSelect.value !== "" && subModelSelect && subModelSelect.value !== "" && quantityInput) {
+                if (shipTypeSelect?.value && shipNameSelect?.value && subModelSelect?.value !== "" && quantityInput) {
                     const selectedShipTypeName = shipTypeSelect.value;
                     const selectedShipName = shipNameSelect.value;
                     const selectedSubModelIndex = parseInt(subModelSelect.value);
-                    const quantity = parseInt(quantityInput.value);
+                    const quantity = parseInt(quantityInput.value) || 0;
 
                     const selectedShipTypeData = shipsData[selectedShipTypeName];
-                    const selectedShip = selectedShipTypeData.find(ship => ship.name === selectedShipName);
+                    const selectedShip = selectedShipTypeData?.find(ship => ship.name === selectedShipName);
+                    const subModel = selectedShip?.subModels?.[selectedSubModelIndex];
 
-                    if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
-                        const subModel = selectedShip.subModels[selectedSubModelIndex];
-                        if (!reinforcementCheckbox.checked || reinforcementShips >= reinforcementLimit) {
-                            totalCost += subModel.cost * quantity;
-                        } else if (reinforcementCheckbox.checked) {
-                            reinforcementShips += quantity;
+                    if (subModel) {
+                        if (reinforcementCheckbox?.checked && (usedReinforcementSlots + quantity <= currentReinforcementLimit)) {
+                            usedReinforcementSlots += quantity;
+                        } else {
+                            calculatedCost += (subModel.cost || 0) * quantity;
                         }
                     }
                 }
             });
 
-            totalCost += multipurposeFGCount * fgCost;
-            totalCost += reconFGCount * fgCost;
+            calculatedCost += multipurposeFGCount * fgCost;
+            calculatedCost += reconFGCount * fgCost;
 
             const costDisplay = document.getElementById("cost-display");
-            costDisplay.innerText = `현재 코스트: ${totalCost}`;
-            if (totalCost > 400) {
-                costDisplay.classList.add("warning");
-            } else {
-                costDisplay.classList.remove("warning");
+            if (multipurposeFGCount === 0 && reconFGCount === 0) {
+                 costDisplay.innerText = `현재 지휘포인트: ${calculatedCost}`; // 레이블 변경
             }
-            return totalCost;
+            costDisplay.classList.toggle("warning", calculatedCost > currentMaxCost); // currentMaxCost 기준으로 경고
+
+            updateReinforcementInfo();
+
+            return calculatedCost;
         }
 
+        // 새 함선 선택 추가
         function addShipSelection() {
             shipSelectionCounter++;
             const container = document.getElementById("shipSelections");
             const div = document.createElement("div");
             div.classList.add("ship-selection");
+            div.id = `ship-selection-${shipSelectionCounter}`;
             div.innerHTML = `
                 <label for="ship-type-${shipSelectionCounter}">함종:</label>
-                <select id="ship-type-${shipSelectionCounter}" onchange="populateShipNames(${shipSelectionCounter}); calculateTotalCost();">
+                <select id="ship-type-${shipSelectionCounter}" onchange="populateShipNames(${shipSelectionCounter})">
                     <option value="">선택하세요</option>
                     ${shipTypes.map(type => `<option value="${type}">${type}</option>`).join('')}
                 </select>
                 <label for="ship-name-${shipSelectionCounter}">함선:</label>
-                <select id="ship-name-${shipSelectionCounter}" onchange="populateSubModels(${shipSelectionCounter}); calculateTotalCost();">
+                <select id="ship-name-${shipSelectionCounter}" onchange="populateSubModels(${shipSelectionCounter})">
                     <option value="">선택하세요</option>
                 </select>
                 <label for="sub-model-${shipSelectionCounter}">서브모델:</label>
-                <select id="sub-model-${shipSelectionCounter}" onchange="updateShipInfo(${shipSelectionCounter}); calculateTotalCost();">
+                <select id="sub-model-${shipSelectionCounter}" onchange="updateShipInfo(${shipSelectionCounter})">
                     <option value="">선택하세요</option>
                 </select>
-                <div id="ship-info-${shipSelectionCounter}"></div>
+                <div id="ship-info-${shipSelectionCounter}" style="margin-top: 10px;"></div>
                 <label for="quantity-${shipSelectionCounter}">갯수:</label>
-                <input type="number" id="quantity-${shipSelectionCounter}" value="1" min="1" onchange="calculateTotalCost()">
+                <input type="number" id="quantity-${shipSelectionCounter}" value="1" min="1" oninput="calculateTotalCost()">
                 <div class="reinforcement-container">
-                    <input type="checkbox" id="reinforcement-${shipSelectionCounter}" onclick="toggleReinforcement(${shipSelectionCounter}); calculateTotalCost();">
+                    <input type="checkbox" id="reinforcement-${shipSelectionCounter}" onclick="toggleReinforcement(${shipSelectionCounter})">
                     <label for="reinforcement-${shipSelectionCounter}">증원</label>
                 </div>
+                <button onclick="removeShipSelection(${shipSelectionCounter})" class="remove-btn" style="float: right;">삭제</button>
             `;
             container.appendChild(div);
-            calculateTotalCost(); // 새 함선 추가 후 코스트 계산
+            calculateTotalCost();
         }
 
+        // 함선 선택 삭제
+        function removeShipSelection(id) {
+            const selectionToRemove = document.getElementById(`ship-selection-${id}`);
+            if (selectionToRemove) {
+                selectionToRemove.remove();
+                calculateTotalCost();
+            }
+        }
+
+        // 함선 이름 목록 채우기
         function populateShipNames(id) {
             const shipTypeSelect = document.getElementById(`ship-type-${id}`);
             const shipNameSelect = document.getElementById(`ship-name-${id}`);
+            const subModelSelect = document.getElementById(`sub-model-${id}`);
+            const infoDiv = document.getElementById(`ship-info-${id}`);
             const selectedShipType = shipTypeSelect.value;
 
-            // 함선 이름 드롭다운 초기화
             shipNameSelect.innerHTML = '<option value="">선택하세요</option>';
+            subModelSelect.innerHTML = '<option value="">선택하세요</option>';
+            infoDiv.innerHTML = "";
 
             if (selectedShipType && shipsData[selectedShipType]) {
-                shipsData[selectedShipType].forEach(ship => {
+                const sortedShips = [...shipsData[selectedShipType]].sort((a, b) => a.name.localeCompare(b.name));
+                sortedShips.forEach(ship => {
                     const option = document.createElement("option");
                     option.value = ship.name;
                     option.textContent = ship.name;
                     shipNameSelect.appendChild(option);
                 });
-            } else {
-                document.getElementById(`sub-model-${id}`).innerHTML = '<option value="">선택하세요</option>';
-                document.getElementById(`ship-info-${id}`).innerHTML = "";
             }
-            // 함선 종류가 바뀌면 서브모델 드롭다운도 초기화
-            document.getElementById(`sub-model-${id}`).innerHTML = '<option value="">선택하세요</option>';
-            document.getElementById(`ship-info-${id}`).innerHTML = "";
+            calculateTotalCost();
         }
 
+        // 서브모델 목록 채우기
         function populateSubModels(id) {
             const shipTypeSelect = document.getElementById(`ship-type-${id}`);
             const shipNameSelect = document.getElementById(`ship-name-${id}`);
             const subModelSelect = document.getElementById(`sub-model-${id}`);
+            const infoDiv = document.getElementById(`ship-info-${id}`);
             const selectedShipType = shipTypeSelect.value;
             const selectedShipName = shipNameSelect.value;
 
-            // 서브모델 드롭다운 초기화
             subModelSelect.innerHTML = '<option value="">선택하세요</option>';
+            infoDiv.innerHTML = "";
 
-            if (selectedShipType && shipsData[selectedShipType]) {
+            if (selectedShipType && selectedShipName && shipsData[selectedShipType]) {
                 const selectedShip = shipsData[selectedShipType].find(ship => ship.name === selectedShipName);
-                if (selectedShip && selectedShip.subModels) {
-                    selectedShip.subModels.forEach((subModel, index) => {
-                        const option = document.createElement("option");
-                        option.value = index;
-                        option.textContent = subModel.name;
-                        subModelSelect.appendChild(option);
-                    });
+                if (selectedShip?.subModels) {
+                     const sortedSubModels = [...selectedShip.subModels].sort((a, b) => a.name.localeCompare(b.name));
+                     sortedSubModels.forEach((subModel) => {
+                         const originalIndex = selectedShip.subModels.findIndex(original => original.name === subModel.name);
+                         const option = document.createElement("option");
+                         option.value = originalIndex;
+                         option.textContent = subModel.name;
+                         subModelSelect.appendChild(option);
+                     });
                 }
-            } else {
-                document.getElementById(`ship-info-${id}`).innerHTML = "";
             }
             updateShipInfo(id);
         }
 
+        // 함선 정보 업데이트
         function updateShipInfo(id) {
             const shipTypeSelect = document.getElementById(`ship-type-${id}`);
             const shipNameSelect = document.getElementById(`ship-name-${id}`);
@@ -482,44 +630,64 @@
 
             const selectedShipTypeName = shipTypeSelect.value;
             const selectedShipName = shipNameSelect.value;
-            const selectedSubModelIndex = parseInt(subModelSelect.value);
+            const selectedSubModelIndexValue = subModelSelect.value;
 
-            if (selectedShipTypeName && shipsData[selectedShipTypeName]) {
-                const selectedShip = shipsData[selectedShipTypeName].find(ship => ship.name === selectedShipName);
-                if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
-                    const subModel = selectedShip.subModels[selectedSubModelIndex];
+            infoDiv.innerHTML = "";
+
+            if (selectedShipTypeName && selectedShipName && selectedSubModelIndexValue !== "") {
+                 const selectedShipTypeData = shipsData[selectedShipTypeName];
+                 const selectedShip = selectedShipTypeData?.find(ship => ship.name === selectedShipName);
+                 const subModelIndex = parseInt(selectedSubModelIndexValue);
+                 const subModel = selectedShip?.subModels?.[subModelIndex];
+
+                 if (subModel) {
+                    const imagePath = `https://via.placeholder.com/50/cccccc/ffffff.png?text=${selectedShipName.substring(0,3)}`;
+
                     infoDiv.innerHTML = `
                         <div class="ship-info">
-                            <img src="img1/${subModel.image}" alt="${selectedShipName} ${subModel.name}">
+                            <img src="${imagePath}" alt="${selectedShipName} ${subModel.name}" onerror="handleImageError(this)">
                             <div>
-                                <p>이름: ${selectedShipName} (${subModel.name})</p>
-                                <p>워프 속도: ${subModel.warpSpeed}</p>
-                                <p>코스트: ${subModel.cost}</p>
-                            </div>
+                                <p><strong>${selectedShipName} (${subModel.name})</strong></p>
+                                <p>워프 속도: ${subModel.warpSpeed || 'N/A'}</p>
+                                <p>지휘 포인트: ${subModel.cost || 'N/A'}</p> </div>
                         </div>
                     `;
-                } else {
-                    infoDiv.innerHTML = "";
-                }
-            } else {
-                infoDiv.innerHTML = "";
+                 } else {
+                     infoDiv.innerHTML = `<p class="error-placeholder">서브모델 정보를 불러올 수 없습니다.</p>`;
+                 }
+            } else if (selectedShipName) {
+                 infoDiv.innerHTML = `<p class="error-placeholder">서브모델을 선택해주세요.</p>`;
             }
+            calculateTotalCost();
         }
 
+        // 증원 체크박스 토글
         function toggleReinforcement(id) {
             const checkbox = document.getElementById(`reinforcement-${id}`);
+            const currentSelection = document.getElementById(`ship-selection-${id}`);
+            const currentQuantityInput = currentSelection.querySelector("input[type='number']");
+            const currentShipQuantity = parseInt(currentQuantityInput.value) || 0;
+
             if (checkbox.checked) {
-                if (reinforcementCount < reinforcementLimit) {
-                    reinforcementCount++;
-                } else {
-                    alert(`증원 함선은 최대 ${reinforcementLimit}대까지 선택 가능합니다.`);
+                let usedReinforcementSlots = 0;
+                const shipSelections = document.querySelectorAll(".ship-selection");
+                shipSelections.forEach(selection => {
+                    const quantityInput = selection.querySelector("input[type='number']");
+                    const reinforcementCheckbox = selection.querySelector("input[type='checkbox']");
+                    if (reinforcementCheckbox?.checked && reinforcementCheckbox.id !== checkbox.id && quantityInput) {
+                        usedReinforcementSlots += parseInt(quantityInput.value) || 0;
+                    }
+                });
+
+                if (usedReinforcementSlots + currentShipQuantity > currentReinforcementLimit) {
+                    alert(`증원 함선은 최대 ${currentReinforcementLimit}대까지 선택 가능합니다. 현재 ${usedReinforcementSlots}대 선택됨.`);
                     checkbox.checked = false;
                 }
-            } else {
-                reinforcementCount--;
             }
+            calculateTotalCost();
         }
 
+        // 최적 FG 조합 계산
         function calculateBestFG() {
             let totalShipWarpSpeed = 0;
             let totalShips = 0;
@@ -531,86 +699,99 @@
                 const subModelSelect = selection.querySelector("select[id^='sub-model-']");
                 const quantityInput = selection.querySelector("input[type='number']");
 
-                if (shipTypeSelect && shipTypeSelect.value !== "" && shipNameSelect && shipNameSelect.value !== "" && subModelSelect && subModelSelect.value !== "" && quantityInput) {
+                if (shipTypeSelect?.value && shipNameSelect?.value && subModelSelect?.value !== "" && quantityInput) {
                     const selectedShipTypeName = shipTypeSelect.value;
                     const selectedShipName = shipNameSelect.value;
                     const selectedSubModelIndex = parseInt(subModelSelect.value);
-                    const quantity = parseInt(quantityInput.value);
+                    const quantity = parseInt(quantityInput.value) || 0;
 
                     const selectedShipTypeData = shipsData[selectedShipTypeName];
-                    const selectedShip = selectedShipTypeData.find(ship => ship.name === selectedShipName);
+                    const selectedShip = selectedShipTypeData?.find(ship => ship.name === selectedShipName);
+                    const subModel = selectedShip?.subModels?.[selectedSubModelIndex];
 
-                    if (selectedShip && selectedShip.subModels && selectedShip.subModels[selectedSubModelIndex]) {
-                        const subModel = selectedShip.subModels[selectedSubModelIndex];
-                        totalShipWarpSpeed += subModel.warpSpeed * quantity;
+                    if (subModel) {
+                        totalShipWarpSpeed += (subModel.warpSpeed || 0) * quantity;
                         totalShips += quantity;
                     }
                 }
             });
 
+            const resultDiv = document.getElementById("result");
             if (totalShips === 0) {
-                document.getElementById("result").innerText = "선택된 함선이 없습니다.";
+                resultDiv.innerHTML = "함선을 먼저 선택하고 수량을 입력해주세요.";
                 calculateTotalCost(0, 0);
                 return;
             }
 
-            let baseAverageWarpSpeed = 0;
-            if (totalShips > 0) {
-                baseAverageWarpSpeed = totalShipWarpSpeed / totalShips;
-            }
-
-            let bestMultipurposeFGCount = 0;
-            let bestReconFGCount = 0;
+            let baseAverageWarpSpeed = totalShipWarpSpeed / totalShips;
+            let bestMultipurposeFGCount = -1;
+            let bestReconFGCount = -1;
             let minWarpSpeedDiff = Infinity;
 
-            // 다기능형 FG와 정찰형 FG 조합을 탐색 (각각 0~15대)
-            for (let multipurposeFGCount = 0; multipurposeFGCount <= maxFGCount; multipurposeFGCount++) {
-                for (let reconFGCount = 0; reconFGCount <= maxFGCount; reconFGCount++) {
-                    const currentTotalWarpSpeed = totalShipWarpSpeed + multipurposeFGCount * multipurposeFGWarpSpeed + reconFGCount * reconFGWarpSpeed;
-                    const currentTotalShips = totalShips + multipurposeFGCount + reconFGCount;
-
+            for (let mpFG = 0; mpFG <= maxFGCount; mpFG++) {
+                for (let rFG = 0; rFG <= maxFGCount; rFG++) {
+                    const currentTotalWarpSpeed = totalShipWarpSpeed + mpFG * multipurposeFGWarpSpeed + rFG * reconFGWarpSpeed;
+                    const currentTotalShips = totalShips + mpFG + rFG;
                     if (currentTotalShips > 0) {
                         const currentAverageWarpSpeed = currentTotalWarpSpeed / currentTotalShips;
                         const warpSpeedDiff = Math.abs(currentAverageWarpSpeed - targetWarpSpeed);
-
                         if (warpSpeedDiff < minWarpSpeedDiff) {
                             minWarpSpeedDiff = warpSpeedDiff;
-                            bestMultipurposeFGCount = multipurposeFGCount;
-                            bestReconFGCount = reconFGCount;
+                            bestMultipurposeFGCount = mpFG;
+                            bestReconFGCount = rFG;
+                        } else if (warpSpeedDiff === minWarpSpeedDiff) {
+                            if ((mpFG + rFG) < (bestMultipurposeFGCount + bestReconFGCount)) {
+                                bestMultipurposeFGCount = mpFG;
+                                bestReconFGCount = rFG;
+                            }
                         }
                     }
                 }
             }
 
+             if (bestMultipurposeFGCount === -1) {
+                 resultDiv.innerHTML = `선택된 함선 평균 워프 속도: ${baseAverageWarpSpeed.toFixed(2)}<br>목표 속도(${targetWarpSpeed})에 근접하는 FG 조합을 찾지 못했습니다.`;
+                 calculateTotalCost(0, 0);
+                 return;
+             }
+
             const finalTotalWarpSpeed = totalShipWarpSpeed + bestMultipurposeFGCount * multipurposeFGWarpSpeed + bestReconFGCount * reconFGWarpSpeed;
             const finalTotalShips = totalShips + bestMultipurposeFGCount + bestReconFGCount;
-            const finalAverageWarpSpeed = finalTotalWarpSpeed / finalTotalShips;
-            const totalFGCost = (bestMultipurposeFGCount + bestReconFGCount) * fgCost; // 두 종류 FG 모두 동일 코스트 가정
-            const baseShipCost = calculateTotalCost(0, 0); // FG 없이 함선 코스트만 계산
+            const finalAverageWarpSpeed = finalTotalShips > 0 ? finalTotalWarpSpeed / finalTotalShips : 0;
+
+            // FG 제외 함선 지휘 포인트 (증원 적용됨)
+            const baseShipCost = calculateTotalCost(0, 0);
+            // FG 지휘 포인트
+            const totalFGCost = (bestMultipurposeFGCount + bestReconFGCount) * fgCost;
+            // 최종 총 지휘 포인트
             const finalTotalCost = baseShipCost + totalFGCost;
 
-            let resultText = `선택된 모든 함선의 평균 워프 속도: ${baseAverageWarpSpeed.toFixed(2)}<br>`;
-            resultText += `다기능형 FG ${bestMultipurposeFGCount}대, 정찰형 FG ${bestReconFGCount}대 사용 시 평균 워프 속도: ${finalAverageWarpSpeed.toFixed(2)} (목표: ${targetWarpSpeed})<br>`;
-            resultText += `FG 총 코스트: ${totalFGCost}<br>`;
-            resultText += `현재 코스트 (함선): ${baseShipCost}<br>`;
-            resultText += `총 코스트 (함선 + FG): ${finalTotalCost}`;
+            let resultText = `선택된 함선 평균 워프 속도 (FG 제외): ${baseAverageWarpSpeed.toFixed(2)}<br>`;
+            resultText += `<b>최적 조합: 다기능형 FG ${bestMultipurposeFGCount}대, 정찰형 FG ${bestReconFGCount}대</b><br>`;
+            resultText += `결과 평균 워프 속도: <b>${finalAverageWarpSpeed.toFixed(2)}</b> (목표: ${targetWarpSpeed})<br>`;
+            resultText += `FG 총 지휘포인트: ${totalFGCost}<br>`; // 레이블 변경
+            resultText += `현재 지휘포인트 (함선, 증원 제외): ${baseShipCost}<br>`; // 레이블 변경
+            resultText += `<b>총 지휘포인트 (함선 + FG): ${finalTotalCost}</b>`; // 레이블 변경
 
-            const resultDiv = document.getElementById("result");
             resultDiv.innerHTML = resultText;
 
+            // 최종 지휘 포인트 표시 및 경고 업데이트
             const costDisplay = document.getElementById("cost-display");
-            costDisplay.innerText = `현재 코스트: ${finalTotalCost}`;
-            if (finalTotalCost > 400) {
-                costDisplay.classList.add("warning");
-                resultDiv.classList.add("warning");
-            } else {
-                costDisplay.classList.remove("warning");
-                resultDiv.classList.remove("warning");
-            }
+            costDisplay.innerText = `총 지휘포인트: ${finalTotalCost}`; // 레이블 변경
+            costDisplay.classList.toggle("warning", finalTotalCost > currentMaxCost); // currentMaxCost 기준 경고
+            resultDiv.classList.toggle("warning", finalTotalCost > currentMaxCost);
         }
 
-        // 초기 함선 선택 영역 추가 및 초기 코스트 계산
-        addShipSelection();
+        // 초기화
+        function initializeCalculator() {
+            document.getElementById('max-cost-input').value = currentMaxCost;
+            setReinforcementLimit(5);
+            addShipSelection();
+        }
+
+        // 페이지 로드 시 초기화
+        window.onload = initializeCalculator;
+
     </script>
 </body>
 </html>
